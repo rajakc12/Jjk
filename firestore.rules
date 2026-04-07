@@ -1,0 +1,121 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // Collection: users
+    // Document ID: {userId} (matches request.auth.uid)
+    // Fields:
+    //   - uid: string (required)
+    //   - email: string (required)
+    //   - displayName: string
+    //   - photoURL: string
+    //   - createdAt: timestamp
+    //
+    // Collection: testResults
+    // Document ID: auto-generated
+    // Fields:
+    //   - uid: string (required, matches request.auth.uid)
+    //   - topic: string (required)
+    //   - examType: string
+    //   - score: number (required)
+    //   - totalQuestions: number (required)
+    //   - createdAt: timestamp (required)
+    //   - status: string
+    //
+    // Collection: feedback
+    // Document ID: auto-generated
+    // Fields:
+    //   - email: string (required)
+    //   - message: string (required)
+    //   - userId: string (optional)
+    //   - timestamp: timestamp (required)
+    //
+    // ===============================================================
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+    
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isDocOwner() {
+      return isAuthenticated() && request.auth.uid == resource.data.uid;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() &&
+        ((exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
+          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin') ||
+          (request.auth.token.email == "anilmahor463@gmail.com" && request.auth.token.email_verified == true));
+    }
+
+    function isValidUser(data) {
+      return data.keys().hasAll(['uid', 'email']) &&
+             data.uid is string &&
+             data.email is string &&
+             data.email.size() < 100 &&
+             (!('medium' in data) || (data.medium is string && data.medium.size() < 20)) &&
+             (!('exam' in data) || (data.exam is string && data.exam.size() < 20));
+    }
+
+    function isValidTestResult(data) {
+      return data.keys().hasAll(['uid', 'topic', 'score', 'totalQuestions', 'createdAt']) &&
+             data.uid is string &&
+             data.topic is string &&
+             data.score is number &&
+             data.totalQuestions is number &&
+             (data.createdAt is timestamp || data.createdAt == request.time);
+    }
+
+    function isValidFeedback(data) {
+      return data.keys().hasAll(['email', 'message', 'timestamp']) &&
+             data.keys().hasOnly(['email', 'message', 'timestamp', 'userId']) &&
+             data.email is string && data.email.size() >= 3 && data.email.size() < 100 &&
+             data.message is string && data.message.size() > 0 && data.message.size() < 5000 &&
+             (data.timestamp is timestamp || data.timestamp == request.time) &&
+             (!('userId' in data) || data.userId is string || data.userId == null);
+    }
+
+    function isValidEmail(email) {
+      // Basic validation: must be a string and contain '@'
+      return email is string && email.size() >= 3 && email.matches("^.+@.+$");
+    }
+
+    // ===============================================================
+    // Rules
+    // ===============================================================
+
+    match /test/connection {
+      allow read: if true;
+    }
+
+    match /users/{userId} {
+      allow read: if isOwner(userId);
+      allow create: if isOwner(userId) && isValidUser(request.resource.data);
+      allow update: if isOwner(userId) && isValidUser(request.resource.data) && 
+                      request.resource.data.uid == resource.data.uid;
+    }
+
+    match /testResults/{resultId} {
+      allow read: if isAuthenticated() && (resource == null || resource.data.uid == request.auth.uid || isAdmin());
+      allow create: if isAuthenticated() && 
+                      request.resource.data.uid == request.auth.uid && 
+                      isValidTestResult(request.resource.data);
+    }
+
+    match /feedback/{feedbackId} {
+      allow read: if isAdmin();
+      allow create: if isValidFeedback(request.resource.data) && 
+                      isValidEmail(request.resource.data.email);
+    }
+  }
+}

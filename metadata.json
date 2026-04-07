@@ -1,0 +1,9 @@
+{
+  "name": "Copy of UPSC \u0026 PSC AI Prep Hub",
+  "description": "A comprehensive AI-powered preparation platform for UPSC and PSC aspirants featuring AI test generation, mentors, maps, and PYQs.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone",
+    "geolocation"
+  ]
+}

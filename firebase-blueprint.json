@@ -1,0 +1,60 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "User profile information",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "email": { "type": "string" },
+        "displayName": { "type": "string" },
+        "photoURL": { "type": "string" },
+        "medium": { "type": "string", "enum": ["English", "Hindi"] },
+        "exam": { "type": "string", "enum": ["UPSC", "PSC"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "email"]
+    },
+    "TestResult": {
+      "title": "TestResult",
+      "description": "Record of a completed AI test",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "topic": { "type": "string" },
+        "examType": { "type": "string" },
+        "score": { "type": "number" },
+        "totalQuestions": { "type": "number" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "status": { "type": "string", "enum": ["Passed", "Failed"] }
+      },
+      "required": ["uid", "topic", "score", "totalQuestions", "createdAt"]
+    },
+    "Feedback": {
+      "title": "Feedback",
+      "description": "User feedback submissions",
+      "type": "object",
+      "properties": {
+        "email": { "type": "string" },
+        "message": { "type": "string" },
+        "userId": { "type": "string" },
+        "timestamp": { "type": "string", "format": "date-time" }
+      },
+      "required": ["email", "message", "timestamp"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "User profiles"
+    },
+    "/testResults/{resultId}": {
+      "schema": "TestResult",
+      "description": "History of tests taken by users"
+    },
+    "/feedback/{feedbackId}": {
+      "schema": "Feedback",
+      "description": "User feedback submissions"
+    }
+  }
+}
